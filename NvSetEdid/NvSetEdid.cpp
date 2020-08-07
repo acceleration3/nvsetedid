@@ -181,7 +181,7 @@ int main(int argc, char* argv[])
 					return 5;
 				}
 
-				for (int i = 0; i < gpu_count; i++)
+				for (int i = 0; i < display_count; i++)
 					std::cout << "\tDISPLAY[" << i << "]" << std::endl;
 			}
 		}
