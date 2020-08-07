@@ -181,8 +181,8 @@ int main(int argc, char* argv[])
 					return 5;
 				}
 
-				for (int i = 0; i < display_count; i++)
-					std::cout << "\tDISPLAY[" << i << "]" << std::endl;
+				for (int j = 0; j < display_count; j++)
+					std::cout << "\tDISPLAY[" << j << "]" << std::endl;
 			}
 		}
 		break;
