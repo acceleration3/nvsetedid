@@ -55,7 +55,6 @@ int main(int argc, char* argv[])
 
 	if (command == command::add || command == command::remove)
 	{
-		
 		auto display_it = std::find(arguments.begin(), arguments.end(), "-d");
 		auto gpu_it = std::find(arguments.begin(), arguments.end(), "-g");
 
@@ -84,7 +83,6 @@ int main(int argc, char* argv[])
 			}
 		}
 		
-
 		if (display_it != arguments.end())
 		{
 			auto value_it = std::next(display_it);
@@ -126,139 +124,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	if(command != command::help)
-	{
-		if (NvAPI_Initialize() != NVAPI_OK)
-		{
-			std::cout << "NvAPI failed to initialize" << std::endl;
-			return 1;
-		}
-
-		NvU32 gpu_count = 0;
-		NvPhysicalGpuHandle physical_gpus[NVAPI_MAX_PHYSICAL_GPUS];
-
-		if (NvAPI_EnumPhysicalGPUs(physical_gpus, &gpu_count) != NVAPI_OK)
-		{
-			std::cout << "Failed to query GPUs." << std::endl;
-			NvAPI_Unload();
-			return 2;
-		}
-
-		if (command == command::query)
-		{
-			for (NvU32 i = 0; i < gpu_count; i++)
-			{
-				NvAPI_String gpu_name;
-				NvAPI_GPU_GetFullName(physical_gpus[i], gpu_name);
-				std::cout << "GPU[" << i << "] \"" << gpu_name << "\"" << std::endl;
-
-				NvU32 display_count = 0;
-
-				if (NvAPI_GPU_GetAllDisplayIds(physical_gpus[i], NULL, &display_count) != NVAPI_OK)
-				{
-					std::cout << "Failed to get display count." << std::endl;
-					NvAPI_Unload();
-					return 4;
-				}
-
-				NV_GPU_DISPLAYIDS displays[NVAPI_MAX_DISPLAYS];
-				displays[0].version = NV_GPU_DISPLAYIDS_VER;
-
-				if (NvAPI_GPU_GetAllDisplayIds(physical_gpus[i], displays, &display_count))
-				{
-					std::cout << "Failed to query displays." << std::endl;
-					NvAPI_Unload();
-					return 5;
-				}
-
-				for (NvU32 j = 0; j < display_count; j++)
-				{
-					std::string connector = (displays[j].connectorType == -1 ? "Unknown" : connectors[displays[j].connectorType]);
-
-					std::cout << "\tDISPLAY[" << j << "] ";
-					std::cout << "type = " << connector << ",";
-					std::cout << "connected = " << std::boolalpha << (displays[j].isConnected == 1) << ",";
-					std::cout << "active = " << std::boolalpha << (displays[j].isActive == 1);
-					std::cout << std::endl;
-				}
-			}
-		}
-		else
-		{
-			std::cout << "Target GPU index: " << target_gpu_index << std::endl;
-			std::cout << "Target display index: " << target_display_index << std::endl;
-			std::cout << "EDID file: " << edid_file << std::endl;
-
-			std::ifstream file_stream(edid_file);
-
-			if (!file_stream) 
-			{
-				std::cout << "Failed to open EDID file." << std::endl;
-				NvAPI_Unload();
-				return 3;
-			}
-
-			std::stringstream buffer;
-			buffer << file_stream.rdbuf();
-			
-			std::stringstream converter;
-			std::vector<uint8_t> edid_data;
-			std::string hex;
-			while (buffer >> hex)
-			{
-				uint8_t byte;
-				converter << std::hex << hex;
-				converter >> byte;
-				edid_data.push_back(byte);
-			}
-
-			std::cout << "Loaded EDID file with " << edid_data.size() << " bytes." << std::endl;
-
-			NvU32 display_count = 0;
-
-			if (NvAPI_GPU_GetAllDisplayIds(physical_gpus[0], NULL, &display_count) != NVAPI_OK)
-			{
-				std::cout << "Failed to get display count." << std::endl;
-				NvAPI_Unload();
-				return 4;
-			}
-
-			std::cout << "Display count: " << display_count << std::endl;
-
-			NV_GPU_DISPLAYIDS displays[NVAPI_MAX_DISPLAYS];
-			displays[0].version = NV_GPU_DISPLAYIDS_VER;
-
-			if (NvAPI_GPU_GetAllDisplayIds(physical_gpus[0], displays, &display_count))
-			{
-				std::cout << "Failed to query displays." << std::endl;
-				NvAPI_Unload();
-				return 5;
-			}
-
-			NV_EDID edid;
-			memset(&edid, 0, sizeof(edid));
-			edid.version = NV_EDID_VER;
-			std::copy(edid_data.begin(), edid_data.end(), edid.EDID_Data);
-			
-			if (command == command::add)
-				edid.sizeofEDID = edid_data.size();
-			else
-				edid.sizeofEDID = 0;
-
-			if (NvAPI_GPU_SetEDID(physical_gpus[target_gpu_index], displays[target_display_index].displayId, &edid))
-			{
-				std::cout << "Failed to set EDID." << std::endl;
-				NvAPI_Unload();
-				return 6;
-			}
-
-			if (command == command::add)
-				std::cout << "Successfully set EDID." << std::endl;
-			else
-				std::cout << "Successfully removed EDID." << std::endl;
-		}
-	}
-	else
+	if (command == command::help)
 	{
 		std::cout << std::endl << "Command line:" << std::endl << std::endl;
 		std::cout << "-a -f <edid file> -g <gpu index> -d <display index>\tAdd an EDID config to the GPU/Display combo." << std::endl;
@@ -272,7 +138,142 @@ int main(int argc, char* argv[])
 		std::cout << "  NvSetEdid -a -f edid.txt -g 0 -d 0" << std::endl << std::endl;
 		std::cout << "Remove GPU 0, Display 0's EDID:" << std::endl;
 		std::cout << "  NvSetEdid -r -g 0 -d 0" << std::endl;
+
+		return 0;
 	}
-	
+
+	if (NvAPI_Initialize() != NVAPI_OK)
+	{
+		std::cout << "NvAPI failed to initialize" << std::endl;
+		return 1;
+	}
+
+	NvU32 gpu_count = 0;
+	NvPhysicalGpuHandle physical_gpus[NVAPI_MAX_PHYSICAL_GPUS];
+
+	if (NvAPI_EnumPhysicalGPUs(physical_gpus, &gpu_count) != NVAPI_OK)
+	{
+		std::cout << "Failed to query GPUs." << std::endl;
+		NvAPI_Unload();
+		return 2;
+	}
+
+	std::cout << "GPU Count: " << gpu_count << std::endl << std::endl;
+
+	if (command == command::query)
+	{
+		for (NvU32 i = 0; i < gpu_count; i++)
+		{
+			NvAPI_String gpu_name;
+			NvAPI_GPU_GetFullName(physical_gpus[i], gpu_name);
+			std::cout << "GPU[" << i << "] \"" << gpu_name << "\"" << std::endl;
+
+			NvU32 display_count = 0;
+
+			if (NvAPI_GPU_GetAllDisplayIds(physical_gpus[i], NULL, &display_count) != NVAPI_OK)
+			{
+				std::cout << "Failed to get display count." << std::endl;
+				NvAPI_Unload();
+				return 4;
+			}
+
+			NV_GPU_DISPLAYIDS displays[NVAPI_MAX_DISPLAYS];
+			displays[0].version = NV_GPU_DISPLAYIDS_VER;
+
+			if (NvAPI_GPU_GetAllDisplayIds(physical_gpus[i], displays, &display_count))
+			{
+				std::cout << "Failed to query displays." << std::endl;
+				NvAPI_Unload();
+				return 5;
+			}
+
+			for (NvU32 j = 0; j < display_count; j++)
+			{
+				std::string connector = (displays[j].connectorType == -1 ? "Unknown" : connectors[displays[j].connectorType]);
+
+				std::cout << "\tDISPLAY[" << j << "] ";
+				std::cout << "type = " << connector << ",";
+				std::cout << "connected = " << std::boolalpha << (displays[j].isConnected == 1) << ",";
+				std::cout << "active = " << std::boolalpha << (displays[j].isActive == 1);
+				std::cout << std::endl;
+			}
+		}
+	}
+	else
+	{
+		std::cout << "Target GPU index: " << target_gpu_index << std::endl;
+		std::cout << "Target display index: " << target_display_index << std::endl;
+			
+		std::vector<uint8_t> edid_data;
+
+		if (command == command::add)
+		{
+			std::cout << "EDID file: " << edid_file << std::endl;
+
+			std::ifstream file_stream(edid_file);
+
+			if (!file_stream)
+			{
+				std::cout << "Failed to open EDID file." << std::endl;
+				NvAPI_Unload();
+				return 3;
+			}
+
+			std::stringstream buffer;
+			buffer << file_stream.rdbuf();
+
+			std::stringstream converter;
+			std::string hex;
+			while (buffer >> hex)
+			{
+				uint8_t byte;
+				converter << std::hex << hex;
+				converter >> byte;
+				edid_data.push_back(byte);
+			}
+
+			std::cout << "Loaded EDID file with " << edid_data.size() << " bytes." << std::endl;
+		}
+			
+		NvU32 display_count = 0;
+
+		if (NvAPI_GPU_GetAllDisplayIds(physical_gpus[0], NULL, &display_count) != NVAPI_OK)
+		{
+			std::cout << "Failed to get display count." << std::endl;
+			NvAPI_Unload();
+			return 4;
+		}
+
+		NV_GPU_DISPLAYIDS displays[NVAPI_MAX_DISPLAYS];
+		displays[0].version = NV_GPU_DISPLAYIDS_VER;
+
+		if (NvAPI_GPU_GetAllDisplayIds(physical_gpus[0], displays, &display_count))
+		{
+			std::cout << "Failed to query displays." << std::endl;
+			NvAPI_Unload();
+			return 5;
+		}
+
+		NV_EDID edid;
+		memset(&edid, 0, sizeof(edid));
+		edid.version = NV_EDID_VER;
+		std::copy(edid_data.begin(), edid_data.end(), edid.EDID_Data);
+		edid.sizeofEDID = edid_data.size();
+
+		if (NvAPI_GPU_SetEDID(physical_gpus[target_gpu_index], displays[target_display_index].displayId, &edid))
+		{
+			std::cout << "Failed to set EDID." << std::endl;
+			NvAPI_Unload();
+			return 6;
+		}
+
+		if (command == command::add)
+			std::cout << "Successfully set EDID." << std::endl;
+		else
+			std::cout << "Successfully removed EDID." << std::endl;
+	}
+
+	NvAPI_Unload();
+
 	return 0;
 }
